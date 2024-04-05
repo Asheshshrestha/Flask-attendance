@@ -2,6 +2,8 @@ import os
 
 from flask import Flask
 
+from . import student
+
 def create_app(test_config=None):
     # create and configure the app
     app = Flask(__name__, instance_relative_config=True)
@@ -23,11 +25,15 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    from . import dashboard,teacher,subject
+    from . import dashboard,teacher,subject,student,auth,attendance
+    app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
     app.register_blueprint(teacher.bp)
     app.register_blueprint(subject.bp)
+    app.register_blueprint(student.bp)
+    app.register_blueprint(attendance.bp)
     from . import db
     db.init_app(app)
     
     return app
+

@@ -3,31 +3,26 @@ import functools
 from flask import (
     Flask,Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
-from werkzeug.security import check_password_hash, generate_password_hash
-from flaskr.auth import admin_login_required
+
 app = Flask(__name__)
-bp = Blueprint('teacher', __name__, url_prefix='/teacher')
+bp = Blueprint('student', __name__, url_prefix='/student')
 from flaskr.db import get_db
 from werkzeug.exceptions import abort
 
-
 @bp.route('/list', methods=['GET'])
-@admin_login_required
 def index():
     db = get_db()
-    teachers  = db.execute(
-        'SELECT * FROM teacher'
+    students  = db.execute(
+        'SELECT * FROM student'
     ).fetchall()
-    return render_template('teacher/list.html', teachers=teachers)
+    return render_template('student/list.html', students=students)
 
 @bp.route('/add', methods=['GET','POST'])
-@admin_login_required
 def add():
     if request.method == 'POST':
         first_name = request.form['txtFirstName']
         last_name = request.form['txtLastName']
         email = request.form['txtEmail']
-        password = request.form['txtPassword']
         error = None
 
         if not first_name:
@@ -40,46 +35,34 @@ def add():
         if error is not None:
             flash(error,"danger")
         else:
-            password_hash= generate_password_hash(password)
             db = get_db()
-            cursor = db.cursor()
-            
-            cursor.execute(
-                'Insert into user(username,role,password)'
-                ' VALUES (?, ?);',
-                (email,'teacher', password_hash)
+            db.execute(
+                'Insert into student(first_name,last_name,email)'
+                ' VALUES (?, ?, ?)',
+                (first_name, last_name, email)
             )
             db.commit()
-            inserted_id = cursor.lastrowid
-            cursor.execute(
-                'Insert into teacher(first_name,last_name,email,user_id)'
-                ' VALUES (?, ?, ?, ?);',
-                (first_name, last_name, email,inserted_id)
-            )
-            db.commit()
-            
-            flash("Successfully added new teacher","success")
-            return redirect(url_for('teacher.index'))
-    return render_template('teacher/add.html')
+            flash("Successfully added new student","success")
+            return redirect(url_for('student.index'))
+    return render_template('student/add.html')
 
-def get_teacher(id):
+
+def get_student(id):
     post = get_db().execute(
         'SELECT first_name, last_name, email'
-        ' FROM teacher '
+        ' FROM student '
         ' WHERE id = ?',
         (id,)
     ).fetchone()
 
     if post is None:
-        abort(404, f"Post id {id} doesn't exist.")
+        abort(404, f"Student id {id} doesn't exist.")
     return post
 
 
 @bp.route('/<int:id>/update', methods=('GET', 'POST'))
-@admin_login_required
 def update(id):
-    teacher = get_teacher(id)
-
+    student = get_student(id)
     if request.method == 'POST':
         first_name = request.form['txtFirstName']
         last_name = request.form['txtLastName']
@@ -98,21 +81,21 @@ def update(id):
         else:
             db = get_db()
             db.execute(
-                'UPDATE teacher SET first_name = ?, last_name = ?, email = ?'
+                'UPDATE student SET first_name = ?, last_name = ?, email = ?'
                 ' WHERE id = ?',
                 (first_name, last_name,email, id)
             )
             db.commit()
-            flash("Successfully updated teacher","success")
-            return redirect(url_for('teacher.index'))
+            flash("Successfully updated student","success")
+            return redirect(url_for('student.index'))
 
-    return render_template('teacher/update.html', teacher=teacher)
+    return render_template('student/update.html', student=student)
+
 @bp.route('/<int:id>/delete', methods=('POST',))
-@admin_login_required
 def delete(id):
-    get_teacher(id)
+    get_student(id)
     db = get_db()
-    db.execute('DELETE FROM teacher WHERE id = ?', (id,))
+    db.execute('DELETE FROM student WHERE id = ?', (id,))
     db.commit()
-    flash("Successfully deleted teacher","success")
-    return redirect(url_for('teacher.index'))
+    flash("Successfully deleted student","success")
+    return redirect(url_for('student.index'))
