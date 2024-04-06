@@ -5,6 +5,8 @@ DROP TABLE IF EXISTS user;
 DROP TABLE IF EXISTS course;
 DROP TABLE IF EXISTS course_subject;
 DROP TABLE IF EXISTS batch;
+DROP TABLE IF EXISTS attendance;
+DROP TABLE IF EXISTS attendance_student;
 
 CREATE TABLE user (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,6 +58,25 @@ CREATE TABLE student(
     course_id INTEGER NOT NULL,
     FOREIGN KEY (course_id) REFERENCES course (id),
     FOREIGN KEY (batch_id) REFERENCES batch (id)
+);
+
+CREATE TABLE attendance(
+    id integer primary key AUTOINCREMENT,
+    batch_id INTEGER not null,
+    course_id INTEGER NOT NULL,
+    subject_id INTEGER NOT NULL,
+    attendance_date text NOT NULL,
+    FOREIGN KEY (batch_id) REFERENCES batch (id),
+    FOREIGN KEY (course_id) REFERENCES course (id),
+    FOREIGN KEY (subject_id) REFERENCES subject (id)
+);
+CREATE TABLE attendance_student(
+    id integer primary key AUTOINCREMENT,
+    attendance_id INTEGER not null,
+    student_id INTEGER NOT NULL,
+    status INTEGER NOT NULL,
+    FOREIGN KEY (attendance_id) REFERENCES attendance (id),
+    FOREIGN KEY (student_id) REFERENCES student (id)
 );
 INSERT INTO course (course_name) VALUES
 ('Computer and Information Sciences'),

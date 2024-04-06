@@ -7,22 +7,35 @@ from flask import (
 app = Flask(__name__)
 bp = Blueprint('student', __name__, url_prefix='/student')
 from flaskr.db import get_db
+from flaskr.course import get_course_list
 from werkzeug.exceptions import abort
 
 @bp.route('/list', methods=['GET'])
 def index():
     db = get_db()
     students  = db.execute(
-        'SELECT * FROM student'
+        'SELECT s.id, s.first_name, s.last_name, s.email, c.course_name, b.batch_year batch_name FROM student s'
+        ' JOIN course c ON c.id = s.course_id'
+        ' JOIN batch b on b.id = s.batch_id'
     ).fetchall()
     return render_template('student/list.html', students=students)
 
+def get_batch_list():
+    batchs = get_db().execute(
+        'SELECT id,batch_year,batch_name'
+        ' FROM batch '
+    ).fetchall()
+    return batchs
 @bp.route('/add', methods=['GET','POST'])
 def add():
+    course_list = get_course_list()
+    batch_list = get_batch_list()
     if request.method == 'POST':
         first_name = request.form['txtFirstName']
         last_name = request.form['txtLastName']
         email = request.form['txtEmail']
+        batch_id = request.form['slcBatch']
+        course_id = request.form['slcCourse']
         error = None
 
         if not first_name:
@@ -31,25 +44,29 @@ def add():
             error = 'Last name is required.'
         if not email:
             error = 'Email is required.'
+        if not batch_id or batch_id == '0':
+            error = 'Batch is required.'
+        if not course_id or course_id == '0':
+            error = 'Course is required.'
 
         if error is not None:
             flash(error,"danger")
         else:
             db = get_db()
             db.execute(
-                'Insert into student(first_name,last_name,email)'
-                ' VALUES (?, ?, ?)',
-                (first_name, last_name, email)
+                'Insert into student(first_name,last_name,email,course_id,batch_id)'
+                ' VALUES (?, ?, ?, ?, ?)',
+                (first_name, last_name, email, course_id, batch_id)
             )
             db.commit()
             flash("Successfully added new student","success")
             return redirect(url_for('student.index'))
-    return render_template('student/add.html')
+    return render_template('student/add.html',course_list=course_list,batch_list= batch_list)
 
 
 def get_student(id):
     post = get_db().execute(
-        'SELECT first_name, last_name, email'
+        'SELECT first_name, last_name, email, course_id, batch_id'
         ' FROM student '
         ' WHERE id = ?',
         (id,)
@@ -63,10 +80,14 @@ def get_student(id):
 @bp.route('/<int:id>/update', methods=('GET', 'POST'))
 def update(id):
     student = get_student(id)
+    course_list = get_course_list()
+    batch_list = get_batch_list()
     if request.method == 'POST':
         first_name = request.form['txtFirstName']
         last_name = request.form['txtLastName']
         email = request.form['txtEmail']
+        batch_id = request.form['slcBatch']
+        course_id = request.form['slcCourse']
         error = None
 
         if not first_name:
@@ -75,21 +96,25 @@ def update(id):
             error = 'Last name is required.'
         if not email:
             error = 'Email is required.'
+        if not batch_id or batch_id == '0':
+            error = 'Batch is required.'
+        if not course_id or course_id == '0':
+            error = 'Course is required.'
 
         if error is not None:
             flash(error,'danger')
         else:
             db = get_db()
             db.execute(
-                'UPDATE student SET first_name = ?, last_name = ?, email = ?'
+                'UPDATE student SET first_name = ?, last_name = ?, email = ?, course_id = ?, batch_id = ?'
                 ' WHERE id = ?',
-                (first_name, last_name,email, id)
+                (first_name, last_name,email, id, course_id, batch_id)
             )
             db.commit()
             flash("Successfully updated student","success")
             return redirect(url_for('student.index'))
 
-    return render_template('student/update.html', student=student)
+    return render_template('student/update.html', student=student,course_list=course_list,batch_list= batch_list)
 
 @bp.route('/<int:id>/delete', methods=('POST',))
 def delete(id):
