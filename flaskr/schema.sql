@@ -2,12 +2,20 @@ DROP TABLE IF EXISTS subject;
 DROP TABLE IF EXISTS teacher;
 DROP TABLE IF EXISTS student;
 DROP TABLE IF EXISTS user;
+DROP TABLE IF EXISTS course;
+DROP TABLE IF EXISTS course_subject;
+DROP TABLE IF EXISTS batch;
 
 CREATE TABLE user (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
   role TEXT NOT NULL
+);
+
+CREATE TABLE course(
+    id integer primary key AUTOINCREMENT,
+    course_name text not null
 );
 CREATE TABLE teacher(
     id integer primary key AUTOINCREMENT,
@@ -25,13 +33,38 @@ CREATE TABLE subject(
     FOREIGN KEY (teacher_id) REFERENCES teacher (id)
 
 );
+CREATE TABLE course_subject(
+    id integer primary key AUTOINCREMENT,
+    course_id INTEGER not null,
+    subject_id INTEGER NOT NULL,
+    FOREIGN KEY (course_id) REFERENCES course (id),
+    FOREIGN KEY (subject_id) REFERENCES subject (id)
+);
+CREATE TABLE batch(
+    id integer primary key AUTOINCREMENT,
+    batch_year text not null,
+    batch_intake text NOT NULL,
+    batch_name text NOT NULL
+);
+
 CREATE TABLE student(
     id integer primary key AUTOINCREMENT,
     first_name text not null,
     last_name text not null,
-    email text NOT NULL
-
+    email text NOT NULL,
+    batch_id INTEGER not null,
+    course_id INTEGER NOT NULL,
+    FOREIGN KEY (course_id) REFERENCES course (id),
+    FOREIGN KEY (batch_id) REFERENCES batch (id)
 );
+INSERT INTO course (course_name) VALUES
+('Computer and Information Sciences'),
+('AWS Cloud Architect'),
+('Program and Project Management');
+INSERT INTO batch (batch_year, batch_intake, batch_name) VALUES
+('2024', 'fall', 'Batch A'),
+('2024', 'spring', 'Batch B');
+
 INSERT INTO user (username,role, password)
 VALUES 
     ('admin@yopmail.com','admin', 'scrypt:32768:8:1$psZiWG3OIZxrS1jC$c1a335941efd2187bbef3a98894d7abf6e740d0d33a078a9b9e6b38d6ce1c41a5f17f7017733ad7532778c2d510985949d052a4e7b8117b627fc0f805781ac17'),
@@ -51,15 +84,27 @@ INSERT INTO subject (subject_name, subject_code, teacher_id) VALUES
     ('Physics', 'PHYS102', 2),
     ('Biology', 'BIOL103', 3),
     ('History', 'HIST104', 4);
-
-INSERT INTO student (first_name, last_name, email) VALUES
-    ('John', 'Doe', 'john.doe@yopmail.com'),
-    ('Jane', 'Smith', 'jane.smith@yopmail.com'),
-    ('Michael', 'Johnson', 'michael.johnson@yopmail.com'),
-    ('Emily', 'Brown', 'emily.brown@yopmail.com'),
-    ('David', 'Williams', 'david.williams@yopmail.com'),
-    ('Sarah', 'Jones', 'sarah.jones@yopmail.com'),
-    ('Daniel', 'Garcia', 'daniel.garcia@yopmail.com'),
-    ('Jennifer', 'Martinez', 'jennifer.martinez@yopmail.com'),
-    ('James', 'Hernandez', 'james.hernandez@yopmail.com'),
-    ('Jessica', 'Lopez', 'jessica.lopez@yopmail.com');
+INSERT INTO course_subject (course_id, subject_id) VALUES
+(1,1),
+(1,2),
+(1,3),
+(2,4),
+(2,1),
+(2,2),
+(2,3),
+(2,4),
+(3,1),
+(3,2),
+(3,3),
+(3,4);
+INSERT INTO student (first_name, last_name, email,batch_id,course_id) VALUES
+    ('John', 'Doe', 'john.doe@yopmail.com',1,1),
+    ('Jane', 'Smith', 'jane.smith@yopmail.com',1,1),
+    ('Michael', 'Johnson', 'michael.johnson@yopmail.com',1,1),
+    ('Emily', 'Brown', 'emily.brown@yopmail.com',1,1),
+    ('David', 'Williams', 'david.williams@yopmail.com',1,1),
+    ('Sarah', 'Jones', 'sarah.jones@yopmail.com',1,1),
+    ('Daniel', 'Garcia', 'daniel.garcia@yopmail.com',1,1),
+    ('Jennifer', 'Martinez', 'jennifer.martinez@yopmail.com',1,1),
+    ('James', 'Hernandez', 'james.hernandez@yopmail.com',1,1),
+    ('Jessica', 'Lopez', 'jessica.lopez@yopmail.com',1,1);

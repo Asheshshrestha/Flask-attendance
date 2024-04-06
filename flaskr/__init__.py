@@ -25,12 +25,14 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    from . import dashboard,teacher,subject,student,auth,attendance
+    from . import dashboard,teacher,subject,student,auth,attendance,batch,course
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
     app.register_blueprint(teacher.bp)
     app.register_blueprint(subject.bp)
     app.register_blueprint(student.bp)
+    app.register_blueprint(batch.bp)
+    app.register_blueprint(course.bp)
     app.register_blueprint(attendance.bp)
     from . import db
     db.init_app(app)
