@@ -66,6 +66,8 @@ CREATE TABLE attendance(
     course_id INTEGER NOT NULL,
     subject_id INTEGER NOT NULL,
     attendance_date text NOT NULL,
+    user_id INTEGER NOT NULL,
+    type text NOT NULL,
     FOREIGN KEY (batch_id) REFERENCES batch (id),
     FOREIGN KEY (course_id) REFERENCES course (id),
     FOREIGN KEY (subject_id) REFERENCES subject (id)

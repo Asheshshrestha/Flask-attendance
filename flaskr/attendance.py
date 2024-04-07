@@ -11,6 +11,46 @@ from datetime import datetime
 from flaskr.student import get_batch_list
 bp = Blueprint('attendance', __name__, url_prefix='/attendance')
 
+@bp.route('/list', methods=['GET'])
+def index():
+    db = get_db()
+    attendance  = db.execute(
+        '''select a.id,
+            b.batch_year,
+            c.course_name,
+            s.subject_name,
+            a.attendance_date,
+            t.first_name|| ' ' ||t.last_name created_by, 
+            count(1) total_student,
+            COUNT(CASE WHEN ast.status = 1 THEN st.id END) AS present_students,
+            COUNT(CASE WHEN ast.status = 0 THEN st.id END) AS absent_students,
+            a.type
+            from attendance a 
+            JOIN attendance_student ast ON a.id = ast.attendance_id
+            JOIN batch b ON b.id = a.batch_id
+            JOIN course c ON c.id = a.course_id
+            JOIN subject s ON s.id = a.subject_id
+            JOIN student st ON c.id = st.course_id AND ast.student_id = st.id
+            JOIN teacher t ON t.user_id = a.user_id
+            GROUP BY a.id,b.batch_year,c.course_name,s.subject_name,a.attendance_date'''
+    ).fetchall()
+    return render_template('attendance/attendancelist.html', attendance=attendance)
+@bp.route('/<int:id>/list', methods=['GET'])
+def student_list(id):
+    db = get_db()
+    students  = db.execute(
+        '''select st.id,st.first_name || " "|| st.last_name student_name,ast.status
+            from attendance a 
+            JOIN attendance_student ast ON a.id = ast.attendance_id
+            JOIN batch b ON b.id = a.batch_id
+            JOIN course c ON c.id = a.course_id
+            JOIN subject s ON s.id = a.subject_id
+            JOIN student st ON c.id = st.course_id AND ast.student_id = st.id
+            JOIN teacher t ON t.user_id = a.user_id 
+            WHERE a.id = ?''',
+            (id,)
+    ).fetchall()
+    return render_template('attendance/studentlist.html', students=students)
 
 def get_course_list():
     post = get_db().execute(
@@ -76,19 +116,32 @@ def getstudents():
     subject_id = request.args.get('subject_id', default='default_value', type=str)
     attendance_date = request.args.get('attendance_date', default='default_value', type=str)
     students = []
-    students = get_db().execute(
-            '''SELECT DISTINCT s.id, s.first_name, s.last_name, IFNULL(ast.status, "") AS status
-                FROM student s
-                JOIN batch b ON b.id = s.batch_id 
-                JOIN course c ON c.id = s.course_id 
-                JOIN course_subject cs ON cs.course_id = c.id 
-                JOIN subject sb ON sb.id = cs.subject_id 
-                JOIN teacher t ON t.id = sb.teacher_id
-                LEFT JOIN attendance a ON a.batch_id = b.id AND a.course_id = c.id AND a.subject_id = sb.id 
-                LEFT JOIN attendance_student ast ON ast.attendance_id = a.id AND s.id = ast.student_id
-                WHERE s.batch_id = ?  AND cs.course_id = ? AND cs.subject_id = ? AND t.user_id = ? AND a.attendance_date = ? ORDER BY s.id''',
-            (batch_id,course_id,subject_id,g.user['id'],attendance_date)
-        ).fetchall()
+    if check_exist(batch_id,course_id,subject_id,attendance_date):
+        students = get_db().execute(
+                '''SELECT DISTINCT s.id, s.first_name, s.last_name, IFNULL(ast.status, "") AS status
+                    FROM student s
+                    JOIN batch b ON b.id = s.batch_id 
+                    JOIN course c ON c.id = s.course_id 
+                    JOIN course_subject cs ON cs.course_id = c.id 
+                    JOIN subject sb ON sb.id = cs.subject_id 
+                    JOIN teacher t ON t.id = sb.teacher_id
+                    LEFT JOIN attendance a ON a.batch_id = b.id AND a.course_id = c.id AND a.subject_id = sb.id 
+                    LEFT JOIN attendance_student ast ON ast.attendance_id = a.id AND s.id = ast.student_id
+                    WHERE s.batch_id = ?  AND cs.course_id = ? AND cs.subject_id = ? AND t.user_id = ? AND a.attendance_date = ? ORDER BY s.id''',
+                (batch_id,course_id,subject_id,g.user['id'],attendance_date)
+            ).fetchall()
+    else:
+        students = get_db().execute(
+                '''SELECT DISTINCT s.id, s.first_name, s.last_name, "0" AS status
+                    FROM student s
+                    JOIN batch b ON b.id = s.batch_id 
+                    JOIN course c ON c.id = s.course_id 
+                    JOIN course_subject cs ON cs.course_id = c.id 
+                    JOIN subject sb ON sb.id = cs.subject_id 
+                    JOIN teacher t ON t.id = sb.teacher_id
+                    WHERE s.batch_id = ?  AND cs.course_id = ? AND cs.subject_id = ? AND t.user_id = ? ORDER BY s.id''',
+                (batch_id,course_id,subject_id,g.user['id'])
+            ).fetchall()
 
     student_ids = [{'id': student['id'],'first_name': student['first_name'],'last_name': student['last_name'],'status': student['status']} for student in students]
     return jsonify(student_ids)
@@ -122,17 +175,17 @@ def submitattendance():
                 )
                 db.commit()
             flash("successfully updated student attendance","success")
-            response = {'statuscode':2,'message': 'Attendance updated successfully','data':None}
+            response = {'statuscode':2,'message': 'Attendance updated successfully','data':attendance_id['id']}
         else:
             db = get_db()
             cursor = db.cursor()
             
             cursor.execute(
                 '''
-                INSERT INTO attendance (batch_id, course_id, subject_id, attendance_date)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO attendance (batch_id, course_id, subject_id, attendance_date, user_id, type)
+                VALUES (?, ?, ?, ?, ?, ?)
                 ''',
-                (batch_id,course_id,subject_id, attendance_date)
+                (batch_id,course_id,subject_id, attendance_date,g.user['id'],'manual')
             )
             db.commit()
             inserted_id = cursor.lastrowid
@@ -144,6 +197,6 @@ def submitattendance():
                 )
                 db.commit()
             flash("successfully saved student attendance","success")
-            response = {'statuscode':1,'message':'successfully saved student attendance','data':studentdata}
+            response = {'statuscode':1,'message':'successfully saved student attendance','data':inserted_id}
     return jsonify(response)
 

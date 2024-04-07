@@ -25,6 +25,8 @@
 
     <!-- Custom styles for this page -->
     <link href="{{ url_for('static', filename='vendor/datatables/dataTables.bootstrap4.min.css') }}" rel="stylesheet">
+    {% block stylesheets %}{% endblock %}
+
 </head>
 
 <body>
@@ -59,6 +61,20 @@
 
             <!-- Divider -->
             <hr class="sidebar-divider">
+            <!-- Nav Item - Pages Collapse Menu -->
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseAttendance"
+                    aria-expanded="true" aria-controls="collapseTwo">
+                    <i class="fas fa-book-reader"></i>
+                    <span>Attendance</span>
+                </a>
+                <div id="collapseAttendance" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="{{ url_for('attendance.takeattendance') }}">Take Attendance</a>
+                        <a class="collapse-item" href="{{ url_for('attendance.index') }}">List</a>
+                    </div>
+                </div>
+            </li> 
 
             {% if g.user['role'] == 'admin' %}
             <!-- Nav Item - Pages Collapse Menu -->

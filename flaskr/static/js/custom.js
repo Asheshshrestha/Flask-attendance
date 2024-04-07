@@ -47,16 +47,19 @@ $(document).ready(function() {
         });
     });
     $('#btnCancel').off('click').on('click',function(){
-        $('.tbl-student-list').hide();
-        disable_search(false);
+        
         reset_search_form();
     });
-
+    $('#btnPrint').off('click').on('click',function(){
+        printDivByID('print-window-table');
+    });
     function reset_search_form(){
         $('#slcBatch').val('0');
         $('#slcCourse').val('0');
         $('#slcSubject').val('0');
         $('#slcAttendanceDate').val('');
+        $('.tbl-student-list').hide();
+        disable_search(false);
 
     }
     function submit_attendance(){
@@ -94,7 +97,32 @@ $(document).ready(function() {
     }
     function submit_attendance_response(data){
         if (data != null){
+            if(data.statuscode == 1 || data.statuscode == 2){
             
+                $.confirm({
+                    title: 'Awesome!',
+                    content: data.message,
+                    autoClose: 'cancel|15000',
+                    columnClass: 'medium',
+                    buttons: {
+                        gotoattendancesheet:{
+                            text: 'Go to attendance sheet',
+                            btnClass: 'btn-success',
+                            action: function () {
+                                window.location.href = `/attendance/${data.data}/list`;
+                            }
+                        },
+                        cancel: {
+                            btnClass: 'btn-danger',
+                            action: function () {
+                                reset_search_form()
+                            }
+                        },
+                    }
+                });
+            }else{
+
+            }
         }
 
     }
@@ -210,4 +238,57 @@ $(document).ready(function() {
        
     }
 
+    function printDivByID(DivIdToPrint) {
+
+        var divToPrint = document.getElementById(DivIdToPrint);
+    
+        var newWin = window.open('', 'Print-Window');
+    
+        newWin.document.open();
+    
+        newWin.document.write(`
+            <!doctype html>
+            <html lang="en">
+
+            <head>
+
+
+                <meta charset="utf-8">
+                <meta http-equiv="X-UA-Compatible" content="IE=edge">
+                <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+                <meta name="description" content="">
+                <meta name="author" content="">
+
+                <title>Attendance System</title>
+
+                <!-- Custom fonts for this template -->
+                <link href="/static/vendor/fontawesome-free/css/all.min.css" rel="stylesheet"
+                    type="text/css">
+                <link
+                    href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
+                    rel="stylesheet">
+
+                <!-- Custom styles for this template -->
+                <link href="/static/css/sb-admin-2.min.css" rel="stylesheet">
+                <link href="/static/css/jquery-confirm.css" rel="stylesheet">
+
+                <!-- Custom styles for this page -->
+                <link href="/static/vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
+
+
+
+            </head>
+
+            <body onload='window.print()'>` + divToPrint.innerHTML + `
+                    
+                </body>
+                
+                </html>
+        `);
+    
+        newWin.document.close();
+    
+        setTimeout(function () { newWin.close(); }, 10);
+    
+    }
   });
