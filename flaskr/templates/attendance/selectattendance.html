@@ -46,9 +46,7 @@
                     <div class="col-8">
                         <select class="custom-select" id="slcSubject" name="slcSubject">
                             <option value="0" selected>Choose subject...</option>
-                            {% for course in course_list %}
-                            <option value="{{ course['id'] }}">{{ course['course_name'] }}</option>
-                            {% endfor %}
+                           
                         </select>
                     </div>
                    
@@ -73,8 +71,8 @@
                 </div>
             </div>
         </form>
-        <div class="table-responsive">
-            <table class="table table-bordered" id="" width="100%" cellspacing="0">
+        <div class="table-responsive tbl-student-list" style="display: none;">
+            <table class="table table-bordered" id="studet_dataTable1" width="100%" cellspacing="0">
                 <thead>
                     <tr>
                         <th>#Roll no</th>
@@ -93,6 +91,17 @@
                     
                 </tbody>
             </table>
+        </div>
+        <div class="row tbl-student-list" style="display: none;">
+            
+            <div class="col-2">
+                <span id="btnCancel" class="btn btn-danger btn-block"><i class="fas fa-window-close"></i>
+                    Cancel</span>
+            </div>
+            <div class="col-2">
+                <span id="btnSubmit" class="btn btn-success btn-block"><i class="fas fa-upload"></i>
+                    Submit</span>
+            </div>
         </div>
     </div>
 </div>

@@ -2,6 +2,7 @@ $(document).ready(function() {
     let $validator = $('#form1').validate({
         errorElement: 'div', // Change the error element to a div
         errorClass: 'invalid-feedback', // Bootstrap 4 class for styling error messages
+        debug: true,
         rules: {
             slcBatch: { selectcheck: true },
             slcCourse: { selectcheck: true },
@@ -19,7 +20,7 @@ $(document).ready(function() {
 
         }
     });
-    jQuery.validator.addMethod('selectcheck', function (value) {
+    jQuery.validator.addMethod('selectcheck', function (value,e) {
         return (value != '0' && value.length > 0);
     }, "*");
 
@@ -28,13 +29,101 @@ $(document).ready(function() {
             check_attendande()
         }
     });
+    $('#slcCourse').off('change').on('change',function(){
+        get_subject_ddl();
+    });
     $('#btnTakeAttendance').off('click').on('click',function(){
-        if($validator.form()){
-            get_students()
+            get_students();
+    });
+    $('#btnSubmit').off('click').on('click',function(){
+        $.confirm({
+            title: 'Confirm!',
+            content: 'Are you sure want to submit attendance?',
+            buttons: {
+                confirm: function () {
+                    submit_attendance()
+                }
+            }
+        });
+    });
+    $('#btnCancel').off('click').on('click',function(){
+        $('.tbl-student-list').hide();
+        disable_search(false);
+        reset_search_form();
+    });
+
+    function reset_search_form(){
+        $('#slcBatch').val('0');
+        $('#slcCourse').val('0');
+        $('#slcSubject').val('0');
+        $('#slcAttendanceDate').val('');
+
+    }
+    function submit_attendance(){
+        var batch_id = $('#slcBatch option:selected').val();
+        var course_id = $('#slcCourse option:selected').val();
+        var subject_id = $('#slcSubject option:selected').val();
+        var attendance_date = $('#slcAttendanceDate').val();
+        let students = []
+        $('.student-cb').each(function(index,item){
+            let $this = $(this);
+            let id = $this.attr('data-id');
+            let status = $this.prop('checked')?1:0;
+            let obj = {id:id,status:status}
+            students.push(obj);
+
+        });
+        let data = {
+            batch_id: batch_id,
+            course_id: course_id,
+            subject_id: subject_id,
+            attendance_date: attendance_date,
+            studentdata: students
+        };
+        $.ajax({
+            url: '/attendance/submitattendance',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: submit_attendance_response,
+            error: function(xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+
+    }
+    function submit_attendance_response(data){
+        if (data != null){
+            
         }
 
+    }
+    function get_subject_ddl(){
+        var course_id = $('#slcCourse option:selected').val();
+        $.ajax({
+            url: '/attendance/get_subject_ddl',
+            type: 'GET',
+            data: {
+                course_id: course_id
+            },
+            success: get_subject_ddl_response,
+            error: function(xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    }
+    function get_subject_ddl_response(data){
+        console.log(data);
+        if(data != null){
+            let html = '<option value="0" selected>Choose subject...</option>';
+           $.each(data,function(index,item){
+            html += `<option value="${item.id}">${item.subject_name}</option>`;
 
-    });
+           });
+           $('#slcSubject').html(html);
+        }
+       
+    }
     function get_students(){
         var batch_id = $('#slcBatch option:selected').val();
         var course_id = $('#slcCourse option:selected').val();
@@ -66,7 +155,7 @@ $(document).ready(function() {
                     <td>
                     <div class="form-group">
                         <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="" id="cbPresent-${item.id}">
+                        <input class="form-check-input student-cb" data-id="${item.id}" type="checkbox" value="" id="cbPresent-${item.id}" ${(item.status==1)?'checked':''}>
                         <label class="form-check-label" for="cbPresent-${item.id}">
                             Present?
                         </label>
@@ -78,11 +167,20 @@ $(document).ready(function() {
 
            });
            $('#div_student_list').html(html);
+           
+            $('.tbl-student-list').show();
+         
            $('#staticBackdrop').modal('hide');
         }
        
     }
-
+    function disable_search(flag = true){
+         $('#slcBatch').prop('disabled',flag?'disabled':flag);
+         $('#slcCourse').prop('disabled',flag?'disabled':flag);
+         $('#slcSubject').prop('disabled',flag?'disabled':flag);
+         $('#slcAttendanceDate').prop('disabled',flag);
+         $('#btnSearch').prop('disabled',flag);
+    }
     function check_attendande(){
         var batch_id = $('#slcBatch option:selected').val();
         var course_id = $('#slcCourse option:selected').val();
@@ -104,9 +202,9 @@ $(document).ready(function() {
         });
     }
     function check_attendande_response(data){
-        console.log(data);
         if(data != null){
             $('#divCheckMessage').text(data.message);
+            disable_search();
             $('#staticBackdrop').modal('show');
         }
        

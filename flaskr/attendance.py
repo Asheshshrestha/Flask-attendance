@@ -8,17 +8,41 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from flaskr.db import get_db
 from datetime import datetime
-from flaskr.subject import get_subject_list_ddl
-from flaskr.student import get_batch_list,get_course_list
+from flaskr.student import get_batch_list
 bp = Blueprint('attendance', __name__, url_prefix='/attendance')
 
+
+def get_course_list():
+    post = get_db().execute(
+        'SELECT c.id,c.course_name'
+        ' FROM course c'
+        ' INNER JOIN course_subject cs ON c.id = cs.course_id'
+        ' INNER JOIN subject s ON s.id = cs.subject_id'
+        ' INNER JOIN teacher t ON t.id = s.teacher_id'
+        ' WHERE t.user_id = ?',
+        (g.user['id'],)
+    ).fetchall()
+    return post
+@bp.route('/get_subject_ddl', methods=['GET'])
+def get_subject_list_ddl():
+    course_id = request.args.get('course_id', default='default_value', type=str)
+    subjects = get_db().execute(
+        'SELECT s.id, s.subject_name'
+        ' FROM course c'
+        ' INNER JOIN course_subject cs ON c.id = cs.course_id'
+        ' INNER JOIN subject s ON s.id = cs.subject_id'
+        ' INNER JOIN teacher t ON t.id = s.teacher_id'
+        ' WHERE c.id = ? and t.user_id = ?',
+        (course_id,g.user['id'],)
+    ).fetchall()
+    subject_list = [{'id': subject['id'],'subject_name': subject['subject_name']} for subject in subjects]
+    return jsonify(subject_list)
 @bp.route('/takeattendance', methods=('GET', 'POST'))
 def takeattendance():
-    subject_list= get_subject_list_ddl()
     batch_list = get_batch_list()
     course_list = get_course_list()
     today_date = datetime.today().date().strftime('%Y-%m-%d')
-    return render_template('attendance/selectattendance.html',subject_list = subject_list,today_date=today_date,batch_list = batch_list,course_list=course_list)
+    return render_template('attendance/selectattendance.html',today_date=today_date,batch_list = batch_list,course_list=course_list)
 
 @bp.route('/checkattendance', methods=['GET'])
 def check_attendance():
@@ -51,17 +75,75 @@ def getstudents():
     course_id = request.args.get('course_id', default='default_value', type=str)
     subject_id = request.args.get('subject_id', default='default_value', type=str)
     attendance_date = request.args.get('attendance_date', default='default_value', type=str)
+    students = []
     students = get_db().execute(
-        'SELECT s.id,s.first_name,s.last_name,IFNULL(ast.status,"") status'
-        ' FROM student s'
-        ' JOIN batch b ON b.id = s.batch_id and b.id = ?'
-        ' JOIN course c ON c.id = s.course_id and c.id = ?'
-        ' JOIN course_subject cs on cs.course_id = c.id and cs.id= ?'
-        ' JOIN subject sb ON sb.id = cs.subject_id '
-        ' LEFT JOIN attendance a on a.batch_id = b.id AND a.course_id = c.id AND a.subject_id = sb.id and a.attendance_date = ?'
-        ' LEFT JOIN attendance_student ast ON ast.attendance_id = a.id',
-        (batch_id,course_id,subject_id,attendance_date)
-    ).fetchall()
+            '''SELECT DISTINCT s.id, s.first_name, s.last_name, IFNULL(ast.status, "") AS status
+                FROM student s
+                JOIN batch b ON b.id = s.batch_id 
+                JOIN course c ON c.id = s.course_id 
+                JOIN course_subject cs ON cs.course_id = c.id 
+                JOIN subject sb ON sb.id = cs.subject_id 
+                JOIN teacher t ON t.id = sb.teacher_id
+                LEFT JOIN attendance a ON a.batch_id = b.id AND a.course_id = c.id AND a.subject_id = sb.id 
+                LEFT JOIN attendance_student ast ON ast.attendance_id = a.id AND s.id = ast.student_id
+                WHERE s.batch_id = ?  AND cs.course_id = ? AND cs.subject_id = ? AND t.user_id = ? AND a.attendance_date = ? ORDER BY s.id''',
+            (batch_id,course_id,subject_id,g.user['id'],attendance_date)
+        ).fetchall()
 
     student_ids = [{'id': student['id'],'first_name': student['first_name'],'last_name': student['last_name'],'status': student['status']} for student in students]
     return jsonify(student_ids)
+@bp.route('/submitattendance', methods=['POST'])
+def submitattendance():
+    response = {'statuscode':0,'message':'error in saving data','data':None}
+    if request.method == 'POST':
+        data = request.json
+        batch_id = data['batch_id']
+        course_id = data['course_id']
+        subject_id = data['subject_id']
+        attendance_date = data['attendance_date']
+        studentdata = data['studentdata']
+        if check_exist(batch_id,course_id,subject_id,attendance_date):
+            attendance_id = get_db().execute(
+                            'SELECT id'
+                            ' FROM attendance '
+                            ' WHERE batch_id = ? AND course_id = ? AND subject_id = ? AND attendance_date = ?',
+                            (batch_id,course_id,subject_id,attendance_date)
+                        ).fetchone()
+            db = get_db()
+            cursor = db.cursor()
+            for student in studentdata:
+                cursor.execute(
+                '''
+                UPDATE attendance_student
+                SET status = ?
+                WHERE attendance_id = ? AND student_id = ?;
+                ''',
+                (student['status'],attendance_id['id'], student['id'])
+                )
+                db.commit()
+            flash("successfully updated student attendance","success")
+            response = {'statuscode':2,'message': 'Attendance updated successfully','data':None}
+        else:
+            db = get_db()
+            cursor = db.cursor()
+            
+            cursor.execute(
+                '''
+                INSERT INTO attendance (batch_id, course_id, subject_id, attendance_date)
+                VALUES (?, ?, ?, ?)
+                ''',
+                (batch_id,course_id,subject_id, attendance_date)
+            )
+            db.commit()
+            inserted_id = cursor.lastrowid
+            for student in studentdata:
+                cursor.execute(
+                'Insert into attendance_student(attendance_id,student_id,status)'
+                ' VALUES (?, ?, ?);',
+                (inserted_id, student['id'], student['status'])
+                )
+                db.commit()
+            flash("successfully saved student attendance","success")
+            response = {'statuscode':1,'message':'successfully saved student attendance','data':studentdata}
+    return jsonify(response)
+
