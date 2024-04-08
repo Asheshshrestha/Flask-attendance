@@ -56,7 +56,7 @@
                 <div class="form-group row align-items-center">
                     <label for="slcAttendanceDate" class="col text-right">Date:</label>
                     <div class="col-8">
-                        <input type="date" class="form-control" id="slcAttendanceDate" name="slcAttendanceDate"  value="{{ today_date }}" max="{{ today_date }}">
+                        <input type="date" class="custom-select form-control" id="slcAttendanceDate" name="slcAttendanceDate"  value="{{ today_date }}" max="{{ today_date }}">
                     </div>
                     
 
@@ -108,7 +108,7 @@
 <!-- Button trigger modal -->
 
   <!-- Modal -->
-  <div class="modal fade" id="staticBackdrop" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+  <!-- <div class="modal fade" id="staticBackdrop" data-backdrop="static" data-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -126,7 +126,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </div> -->
 {% endblock %}
 {% block scripts %}
 <script src="http://ajax.aspnetcdn.com/ajax/jquery.validate/1.11.1/jquery.validate.min.js"></script>

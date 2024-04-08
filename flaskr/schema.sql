@@ -54,6 +54,7 @@ CREATE TABLE student(
     first_name text not null,
     last_name text not null,
     email text NOT NULL,
+    image text NOT NULL,
     batch_id INTEGER not null,
     course_id INTEGER NOT NULL,
     FOREIGN KEY (course_id) REFERENCES course (id),
@@ -120,14 +121,14 @@ INSERT INTO course_subject (course_id, subject_id) VALUES
 (3,2),
 (3,3),
 (3,4);
-INSERT INTO student (first_name, last_name, email,batch_id,course_id) VALUES
-    ('John', 'Doe', 'john.doe@yopmail.com',1,1),
-    ('Jane', 'Smith', 'jane.smith@yopmail.com',1,1),
-    ('Michael', 'Johnson', 'michael.johnson@yopmail.com',1,1),
-    ('Emily', 'Brown', 'emily.brown@yopmail.com',1,1),
-    ('David', 'Williams', 'david.williams@yopmail.com',1,1),
-    ('Sarah', 'Jones', 'sarah.jones@yopmail.com',1,1),
-    ('Daniel', 'Garcia', 'daniel.garcia@yopmail.com',1,1),
-    ('Jennifer', 'Martinez', 'jennifer.martinez@yopmail.com',1,1),
-    ('James', 'Hernandez', 'james.hernandez@yopmail.com',1,1),
-    ('Jessica', 'Lopez', 'jessica.lopez@yopmail.com',1,1);
+INSERT INTO student (first_name, last_name, email,batch_id,course_id,image) VALUES
+    ('John', 'Doe', 'john.doe@yopmail.com',1,1,'/static/img/profile/defaults.png'),
+    ('Jane', 'Smith', 'jane.smith@yopmail.com',1,1,'/static/img/profile/defaults.png'),
+    ('Michael', 'Johnson', 'michael.johnson@yopmail.com',1,1,'/static/img/profile/defaults.png'),
+    ('Emily', 'Brown', 'emily.brown@yopmail.com',1,1,'/static/img/profile/defaults.png'),
+    ('David', 'Williams', 'david.williams@yopmail.com',1,1,'/static/img/profile/defaults.png'),
+    ('Sarah', 'Jones', 'sarah.jones@yopmail.com',1,1,'/static/img/profile/defaults.png'),
+    ('Daniel', 'Garcia', 'daniel.garcia@yopmail.com',1,1,'/static/img/profile/defaults.png'),
+    ('Jennifer', 'Martinez', 'jennifer.martinez@yopmail.com',1,1,'/static/img/profile/defaults.png'),
+    ('James', 'Hernandez', 'james.hernandez@yopmail.com',1,1,'/static/img/profile/defaults.png'),
+    ('Jessica', 'Lopez', 'jessica.lopez@yopmail.com',1,1,'/static/img/profile/defaults.png');

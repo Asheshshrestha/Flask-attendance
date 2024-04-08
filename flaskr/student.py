@@ -9,7 +9,11 @@ bp = Blueprint('student', __name__, url_prefix='/student')
 from flaskr.db import get_db
 from flaskr.course import get_course_list
 from werkzeug.exceptions import abort
-
+import os
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
+UPLOAD_PATH = PROJECT_ROOT+ '\\static\\img\\profile'
+print(UPLOAD_PATH)
+app.config['UPLOAD_FOLDER'] = UPLOAD_PATH
 @bp.route('/list', methods=['GET'])
 def index():
     db = get_db()
@@ -37,6 +41,14 @@ def add():
         batch_id = request.form['slcBatch']
         course_id = request.form['slcCourse']
         error = None
+        if 'txtFileUpload' in request.files:
+            image = request.files['txtFileUpload']
+            if image.filename != '':
+                image.save(os.path.join(app.config['UPLOAD_FOLDER'], image.filename))
+                image_path = '\static\img\profile\\'+image.filename
+
+        else:
+            error = 'Image is required.'
 
         if not first_name:
             error = 'First name is required.'
@@ -48,15 +60,16 @@ def add():
             error = 'Batch is required.'
         if not course_id or course_id == '0':
             error = 'Course is required.'
+          
 
         if error is not None:
             flash(error,"danger")
         else:
             db = get_db()
             db.execute(
-                'Insert into student(first_name,last_name,email,course_id,batch_id)'
-                ' VALUES (?, ?, ?, ?, ?)',
-                (first_name, last_name, email, course_id, batch_id)
+                'Insert into student(first_name,last_name,email,course_id,batch_id,image)'
+                ' VALUES (?, ?, ?, ?, ?, ?)',
+                (first_name, last_name, email, course_id, batch_id,image_path)
             )
             db.commit()
             flash("Successfully added new student","success")
@@ -66,7 +79,7 @@ def add():
 
 def get_student(id):
     post = get_db().execute(
-        'SELECT first_name, last_name, email, course_id, batch_id'
+        'SELECT first_name, last_name, email, course_id, batch_id, image'
         ' FROM student '
         ' WHERE id = ?',
         (id,)

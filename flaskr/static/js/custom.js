@@ -1,4 +1,5 @@
 $(document).ready(function() {
+    let AttendanceID = 0;
     let $validator = $('#form1').validate({
         errorElement: 'div', // Change the error element to a div
         errorClass: 'invalid-feedback', // Bootstrap 4 class for styling error messages
@@ -32,9 +33,7 @@ $(document).ready(function() {
     $('#slcCourse').off('change').on('change',function(){
         get_subject_ddl();
     });
-    $('#btnTakeAttendance').off('click').on('click',function(){
-            get_students();
-    });
+   
     $('#btnSubmit').off('click').on('click',function(){
         $.confirm({
             title: 'Confirm!',
@@ -53,6 +52,108 @@ $(document).ready(function() {
     $('#btnPrint').off('click').on('click',function(){
         printDivByID('print-window-table');
     });
+    $('#btnSendMail').off('click').on('click',function(){
+        let $this = $(this);
+        let teacher_mail = 'ashesh@yopmail.com';//$this.attr('data-mail');
+        $.confirm({
+            title: 'Confirm!',
+            content: '' +
+                    '<form action="" class="formName" id="sendMailFrom">' +
+                    '<div class="form-group">' +
+                    '<label>Mail address</label>' +
+                    `<input type="email" placeholder="john.doe@gmail.com" id="txtTeacherMail" class="custom-select form-control" value="${teacher_mail}" required />` +
+                    '</div>' +
+                    '</form>',
+            autoClose: 'cancel',
+            columnClass: 'medium',
+            buttons: {
+                sendmail:{
+                    text: 'Send Mail',
+                    btnClass: 'btn-success',
+                    action: function () {
+                        let $mailValidator = $('#sendMailFrom').validate({
+                            errorElement: 'div', // Change the error element to a div
+                            errorClass: 'invalid-feedback', // Bootstrap 4 class for styling error messages
+                            debug: true,
+                            rules: {
+                                slcAttendanceDate: { required: true,mail:true},
+                            },
+                            messages: {
+                                slcAttendanceDate: { required: "* required" },
+                            }
+                        });
+                       
+                        if(!$mailValidator.form()){
+                            return false;
+                        }
+                        send_mail();
+                        
+                    }
+                },
+                cancel: {
+                    btnClass: 'btn-danger',
+                    action: function () {
+                        
+                    }
+                },
+            }
+        });
+    });
+    function send_mail(){
+        var mail = $('#txtTeacherMail').val();
+        var attendance_id = $('#btnSendMail').attr('data-id');
+        let data = {
+            mail:mail,
+            attendance_id:attendance_id
+        }
+        $.ajax({
+            url: '/attendance/send-mail',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: send_mail_response,
+            error: function(xhr, status, error) {
+                console.error('Error:', error);
+            }
+        });
+    }
+    function send_mail_response(data){
+        console.log(data);
+        if(data != null){
+            if(data.statuscode == 1){
+                $.confirm({
+                    title: 'Mail Sent!',
+                    content: data.message,
+                    type: 'green',
+                    typeAnimated: true,
+                    buttons: {
+                        close: function () {
+                        }
+                    }
+                });
+            }else{
+                $.confirm({
+                    title: 'Encountered an error!',
+                    content: 'Something went downhill, this may be serious',
+                    type: 'red',
+                    typeAnimated: true,
+                    buttons: {
+                        tryAgain: {
+                            text: 'Try again',
+                            btnClass: 'btn-red',
+                            action: function(){
+                                $('#btnSendMail').trigger('click');
+                            }
+                        },
+                        close: function () {
+                        }
+                    }
+                });
+            }
+            
+        }
+       
+    }
     function reset_search_form(){
         $('#slcBatch').val('0');
         $('#slcCourse').val('0');
@@ -126,7 +227,7 @@ $(document).ready(function() {
         }
 
     }
-    function get_subject_ddl(){
+     function get_subject_ddl(){
         var course_id = $('#slcCourse option:selected').val();
         $.ajax({
             url: '/attendance/get_subject_ddl',
@@ -231,9 +332,38 @@ $(document).ready(function() {
     }
     function check_attendande_response(data){
         if(data != null){
-            $('#divCheckMessage').text(data.message);
             disable_search();
-            $('#staticBackdrop').modal('show');
+            console.log(data)
+            let btntext = '';
+            let btncolor = '';
+            if(data.statuscode == 1){
+                btncolor = 'btn-success';
+                btntext = 'Yes, get students!'
+            }else{
+                btncolor = 'btn-warning';
+                btntext = 'Yes, get students anyway!'
+            }
+            $.confirm({
+                title: 'Confirm!',
+                content: data.message,
+                autoClose: 'cancel',
+                columnClass: 'medium',
+                buttons: {
+                    takeattendance:{
+                        text: btntext,
+                        btnClass: btncolor,
+                        action: function () {
+                            get_students();
+                        }
+                    },
+                    cancel: {
+                        btnClass: 'btn-danger',
+                        action: function () {
+                            reset_search_form();
+                        }
+                    },
+                }
+            });
         }
        
     }
