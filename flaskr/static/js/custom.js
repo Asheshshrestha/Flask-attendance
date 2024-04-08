@@ -100,6 +100,7 @@ $(document).ready(function() {
         });
     });
     function send_mail(){
+        $('.ta-loaderwrapper').show();
         var mail = $('#txtTeacherMail').val();
         var attendance_id = $('#btnSendMail').attr('data-id');
         let data = {
@@ -120,6 +121,7 @@ $(document).ready(function() {
     function send_mail_response(data){
         console.log(data);
         if(data != null){
+            $('.ta-loaderwrapper').hide();
             if(data.statuscode == 1){
                 $.confirm({
                     title: 'Mail Sent!',

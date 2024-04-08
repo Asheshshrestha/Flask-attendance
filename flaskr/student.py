@@ -12,7 +12,6 @@ from werkzeug.exceptions import abort
 import os
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_PATH = PROJECT_ROOT+ '\\static\\img\\profile'
-print(UPLOAD_PATH)
 app.config['UPLOAD_FOLDER'] = UPLOAD_PATH
 @bp.route('/list', methods=['GET'])
 def index():
