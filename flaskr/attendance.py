@@ -1,7 +1,8 @@
+import os
 import functools
 
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request,jsonify, session, url_for
+    Blueprint, flash, g, redirect, render_template, request,jsonify, session, url_for,send_file
 )
 import json
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -10,6 +11,8 @@ from flaskr.db import get_db
 from datetime import datetime
 from flaskr.student import get_batch_list
 bp = Blueprint('attendance', __name__, url_prefix='/attendance')
+
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 @bp.route('/list', methods=['GET'])
 def index():
@@ -200,3 +203,48 @@ def submitattendance():
             response = {'statuscode':1,'message':'successfully saved student attendance','data':inserted_id}
     return jsonify(response)
 
+
+
+@bp.route('/<int:id>/download-excel', methods=['GET'])
+def download_excel(id):
+    excel_file = get_create_excel_sheet(id)
+    return send_file(excel_file, as_attachment=True)
+
+
+def get_create_excel_sheet(id):
+    file_path = ''
+    if id > 0 :
+        relative_file_path = 'attendance_sheets'
+        
+        attendance_detail = get_attendance_detail(id)
+        attendance_date = attendance_detail['attendance_date']
+        batch_year = attendance_detail['batch_year']
+        course_name = attendance_detail['course_name']
+        subject_name = attendance_detail['subject_name']
+
+        relative_file_path = relative_file_path+'\\'+batch_year+'\\'+course_name+'\\'+subject_name+'\\'+attendance_date+'.xlsx'
+
+        #check file existh
+        file_path = os.path.join(PROJECT_ROOT, relative_file_path)
+    
+        # Check if the file exists
+        if not os.path.exists(file_path):
+           pass
+       
+    return file_path
+
+def get_attendance_detail(id):
+    attendance = get_db().execute(
+        '''
+        SELECT a.attendance_date,b.batch_year,c.course_name,s.subject_name 
+        FROM attendance a 
+        JOIN batch b ON b.id = a.batch_id
+        JOIN course c ON c.id = a.course_id
+        JOIN subject  s ON s.id = a.subject_id
+        WHERE a.id =?
+        ''',
+        (id,)
+    ).fetchone()
+
+    
+    return attendance

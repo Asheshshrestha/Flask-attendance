@@ -14,9 +14,9 @@
     <div class="card-header py-3 d-flex justify-content-between">
         <h6 class="m-0 font-weight-bold text-primary">Student list</h6>
         <div>
-            <span id="btnPrint" class="btn btn-info "><i class="fas fa-print px-2"></i>Print</span>
-            <span id="btnDownload" class="btn btn-info"><i class="fas fa-file-download px-2"></i>Download</span>
-            <span id="btnSendMail" class="btn btn-info"><i class="fas fa-envelope px-2"></i>Send Mail</span>
+            <a id="btnPrint" class="btn btn-info "><i class="fas fa-print px-2"></i>Print</a>
+            <a id="btnDownload" href="{{ url_for('attendance.download_excel', id=1) }}" class="btn btn-info"><i class="fas fa-file-download px-2"></i>Download</a>
+            <a id="btnSendMail" class="btn btn-info"><i class="fas fa-envelope px-2"></i>Send Mail</a>
         </div>
     </div>
     <div class="card-body" id="print-window-table">
