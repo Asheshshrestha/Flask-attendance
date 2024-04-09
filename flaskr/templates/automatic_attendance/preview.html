@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block header %}
+<h1 class="h3 mb-2 text-gray-800">Automatic Attendance</h1>
+<p class="mb-4"></p>
+{% endblock %}
+{% block content %}
+<div class="row">
+
+    <!-- Earnings (Monthly) Card Example -->
+    <div class="col-xl-10 col-md-6 mb-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Attendance Camera preview</h6>
+            </div>
+            <div class="card-body">
+                <div>
+                    <img src="{{ url_for('automatic_attendance.video_feed') }}" height="80%">
+
+                    <form class="row" method="post" action="{{ url_for('automatic_attendance.tasks') }}"> 
+                        <div class="col-4">
+                            <input type="btn submit" value="Stop/Start" name="stop" />
+                            <input type="btn submit" value="Capture" name="click"/>
+                            <input type="btn submit" value="Grey" name="grey" />
+                            <input type="btn submit" value="Negative" name="neg" />
+                            <input type="btn submit" value="Face Only" name="face" />
+                            <input type="btn submit" value="Start/Stop Recording" name="rec" />
+                        </div>
+                    </form>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+    {% endblock %}
+    {% block scripts %}
+
+    {% endblock %}

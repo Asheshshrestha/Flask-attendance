@@ -16,12 +16,13 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+from flaskr.settings import EMAIL,PASSWORD
+
+PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 
 bp = Blueprint('attendance', __name__, url_prefix='/attendance')
 
-PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
-EMAIL = 'er.asheshshrestha@gmail.com'
-PASSWORD = 'wtcu yhvv fgkj mgqv'
+
 
 @bp.route('/list', methods=['GET'])
 def index():
