@@ -416,7 +416,7 @@ $(document).ready(function() {
        
     }
     function take_automatic_attendance(){
-        window.location.href = `/automatic_attendance/1/1/1/list`;
+        window.location.href = `/automatic_attendance/1/1/1/take_attendance`;
     }
     function printDivByID(DivIdToPrint) {
 

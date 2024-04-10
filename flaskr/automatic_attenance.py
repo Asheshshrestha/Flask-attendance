@@ -1,13 +1,9 @@
 import functools
-
+import os
 from flask import (
-    Flask,Blueprint, flash, g, redirect, render_template, request, session, url_for,Response
+    Flask,Blueprint, flash, g, redirect, render_template, request, session, url_for,Response,jsonify
 )
-import cv2
-import datetime, time
-import os, sys
-import numpy as np
-from threading import Thread
+
 from werkzeug.security import check_password_hash, generate_password_hash
 from flaskr.auth import admin_login_required
 app = Flask(__name__)
@@ -16,142 +12,144 @@ from flaskr.db import get_db
 from werkzeug.exceptions import abort
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
-global capture,rec_frame, grey, switch, neg, face, rec, out 
-capture=0
-grey=0
-neg=0
-face=0
-switch=1
-rec=0
+#=====================================================================================
+import cv2
+import csv
+import pandas as pd
+import face_recognition
+import numpy as np
+import requests
+from datetime import datetime
+import glob
+#=====================================================================================
+BATCH_ID = 0
+COURSE_ID = 0
+SUBJECT_ID = 0
+ATTENDANCE_LOG = os.path.join(PROJECT_ROOT, 'ml\\attendance_log\\')
+ATTENDANCE_SNAPSHOT = os.path.join(PROJECT_ROOT, 'ml\\snapshots\\')
+ATTENDANCE_LOG_PATH = ''
+FIELD_NAMES = ['id','status','confidence']
+#=====================================================================================
+camera = None
+saved_df = pd.read_csv(
+    os.path.join(PROJECT_ROOT, 'ml\encoding\encodings.csv'))
+en = saved_df["Encodings"]
+n = saved_df["Persons"]
 
-#make shots directory to save pics
-try:
-    os.mkdir('./shots')
-except OSError as error:
-    pass
+e = []
+for i in en:
+    e.append(np.fromstring(i[1:-1], dtype=float, sep=' '))
 
-#Load pretrained face detection model    
-net = cv2.dnn.readNetFromCaffe(os.path.join(PROJECT_ROOT, 'saved_model\\deploy.prototxt.txt'),os.path.join(PROJECT_ROOT, 'saved_model\\res10_300x300_ssd_iter_140000.caffemodel') )
-
-camera = cv2.VideoCapture(0)
-
-def record(out):
-    global rec_frame
-    while(rec):
-        time.sleep(0.05)
-        out.write(rec_frame)
-
-def detect_face(frame):
-    global net
-    (h, w) = frame.shape[:2]
-    blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0,
-        (300, 300), (104.0, 177.0, 123.0))   
-    net.setInput(blob)
-    detections = net.forward()
-    confidence = detections[0, 0, 0, 2]
-
-    if confidence < 0.5:            
-            return frame           
-
-    box = detections[0, 0, 0, 3:7] * np.array([w, h, w, h])
-    (startX, startY, endX, endY) = box.astype("int")
-    try:
-        frame=frame[startY:endY, startX:endX]
-        (h, w) = frame.shape[:2]
-        r = 480 / float(h)
-        dim = ( int(w * r), 480)
-        frame=cv2.resize(frame,dim)
-    except Exception as e:
-        pass
-    return frame
- 
-def gen_frames():  # generate frame by frame from camera
-    global out, capture,rec_frame
+def detect_known_faces(img, image_encodings=e, persons=n):
+    height, width = img.shape[:2]
+    resized_img = cv2.resize(img, (0, 0), fx=0.25, fy=0.25)
+    rgb_img = cv2.cvtColor(resized_img, cv2.COLOR_BGR2RGB)
+    fc = []
+    fn = []
+    confidences = []
+    face_locations = face_recognition.face_locations(rgb_img)
+    face_encodings = face_recognition.face_encodings(
+        rgb_img, face_locations, model="small")
+    for face_encoding, face_location in zip(face_encodings, face_locations):
+        matches = face_recognition.compare_faces(
+            image_encodings, face_encoding)
+        face_distances = face_recognition.face_distance(image_encodings, face_encoding)
+        best_match_index = np.argmin(face_distances)
+        confidence = 1 - face_distances[best_match_index]
+        name = "Unknown"
+        if True in matches:
+            first_match_index = matches.index(True)
+            name = persons[first_match_index]
+            y1, x2, y2, x1 = [coord * 4 for coord in face_location]
+            # Crop and save face image
+            face_img = img[y1:y2, x1:x2]
+            face_file_path = os.path.join(ATTENDANCE_SNAPSHOT, f'temp_{name}_{round(confidence, 2)}.jpg')
+            print(face_file_path)
+            cv2.imwrite(face_file_path, face_img)
+        fc.append(face_location)
+        fn.append(name)
+        confidences.append(round(confidence, 2))
+    return fc, fn, confidences
+#=====================================================================================
+def generate_frames():
+    camera = cv2.VideoCapture(0)  # Use 0 for webcam, or a video file path
     while True:
-        success, frame = camera.read() 
-        if success:
-            if(face):                
-                frame= detect_face(frame)
-            if(grey):
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            if(neg):
-                frame=cv2.bitwise_not(frame)    
-            if(capture):
-                capture=0
-                now = datetime.datetime.now()
-                p = os.path.sep.join(['shots', "shot_{}.png".format(str(now).replace(":",''))])
-                cv2.imwrite(p, frame)
-            
-            if(rec):
-                rec_frame=frame
-                frame= cv2.putText(cv2.flip(frame,1),"Recording...", (0,25), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255),4)
-                frame=cv2.flip(frame,1)
-            
-                
-            try:
-                ret, buffer = cv2.imencode('.jpg', cv2.flip(frame,1))
-                frame = buffer.tobytes()
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-            except Exception as e:
-                pass
-                
+        success, frame = camera.read()
+        frame = cv2.flip(frame,1)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = cv2.resize(frame, (640, 480))
+        face_locations, face_names, match_confidences = detect_known_faces(frame)
+        if face_names:
+            for face_loc, name, confidence in zip(face_locations, face_names, match_confidences):
+                y1, x2, y2, x1 = face_loc
+                cv2.putText(frame, str(name)+' '+ str(confidence)+'%', (x1*4, y1*4 - 40),
+                            cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 200), 2)
+                cv2.rectangle(frame, (x1*4, y1*4), (x2*4, y2*4), (0, 0, 200), 4)
+                if name != 'Unknown':
+                    present_student= {'id':name,'status':'present','confidence':confidence}
+                    with open(ATTENDANCE_LOG_PATH, 'a') as csv_file:
+                        dict_object = csv.DictWriter(csv_file, fieldnames=FIELD_NAMES)
+                        dict_object.writerow(present_student)
+        if not success:
+            break
         else:
-            pass
-
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 @bp.route('/video_feed')
 def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    global ATTENDANCE_LOG_PATH
+    attendance_log_file_name = str(BATCH_ID)+'_'+str(COURSE_ID)+'_'+str(SUBJECT_ID)+'.csv'
+    ATTENDANCE_LOG_PATH = os.path.join(ATTENDANCE_LOG, attendance_log_file_name)
+    with open(ATTENDANCE_LOG_PATH, mode='w', newline='') as file:
+        pass  
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@bp.route('/requests',methods=['POST','GET'])
-def tasks():
-    global switch,camera
-    if request.method == 'POST':
-        if request.form.get('click') == 'Capture':
-            global capture
-            capture=1
-        elif  request.form.get('grey') == 'Grey':
-            global grey
-            grey=not grey
-        elif  request.form.get('neg') == 'Negative':
-            global neg
-            neg=not neg
-        elif  request.form.get('face') == 'Face Only':
-            global face
-            face=not face 
-            if(face):
-                time.sleep(4)   
-        elif  request.form.get('stop') == 'Stop/Start':
-            
-            if(switch==1):
-                switch=0
-                camera.release()
-                cv2.destroyAllWindows()
-                
-            else:
-                camera = cv2.VideoCapture(0)
-                switch=1
-        elif  request.form.get('rec') == 'Start/Stop Recording':
-            global rec, out
-            rec= not rec
-            if(rec):
-                now=datetime.datetime.now() 
-                fourcc = cv2.VideoWriter_fourcc(*'XVID')
-                out = cv2.VideoWriter('vid_{}.avi'.format(str(now).replace(":",'')), fourcc, 20.0, (640, 480))
-                #Start new thread for recording the video
-                thread = Thread(target = record, args=[out,])
-                thread.start()
-            elif(rec==False):
-                out.release()
-                          
-                 
-    elif request.method=='GET':
-        return render_template('index.html')
-    return render_template('index.html')
-
-@bp.route('/<int:bid>/<int:cid>/<int:sid>/list', methods=['GET'])
+@bp.route('/<int:bid>/<int:cid>/<int:sid>/take_attendance', methods=['GET'])
 def index(bid,cid,sid):
-    
+    global BATCH_ID,COURSE_ID,SUBJECT_ID
+    BATCH_ID = bid
+    COURSE_ID = cid
+    SUBJECT_ID = sid
     return render_template('automatic_attendance/preview.html')
-camera.release()
-cv2.destroyAllWindows()  
+
+
+@bp.route('/stop_taking_attendance',methods=['GET'])
+def stop_taking_attendance():
+    global camera
+    batch_id = BATCH_ID
+    course_id = COURSE_ID
+    subject_id = SUBJECT_ID
+    attendance_date = datetime.today().date().strftime('%Y-%m-%d')
+    student_list = get_student_list(batch_id,course_id,subject_id)
+    if camera is not None:
+        camera.release()
+        camera = None
+    return jsonify(student_list)
+
+def get_student_list(batch_id,course_id,subject_id):
+    students = get_db().execute(
+                '''SELECT DISTINCT s.id, s.first_name, s.last_name
+                    FROM student s
+                    JOIN batch b ON b.id = s.batch_id 
+                    JOIN course c ON c.id = s.course_id 
+                    JOIN course_subject cs ON cs.course_id = c.id 
+                    JOIN subject sb ON sb.id = cs.subject_id 
+                    JOIN teacher t ON t.id = sb.teacher_id
+                    WHERE s.batch_id = ?  AND cs.course_id = ? AND cs.subject_id = ? AND t.user_id = ? ORDER BY s.id''',
+                (batch_id,course_id,subject_id,g.user['id'])
+            ).fetchall()
+    student_list = [{'id': student['id'],'first_name': student['first_name'],'last_name': student['last_name']} for student in students]
+    columns = ['id', 'first_name', 'last_name']
+    students_df = pd.DataFrame(student_list, columns=columns)
+    students_df.set_index('id', inplace=True)
+    print(ATTENDANCE_LOG_PATH,'attendane')
+    field_names = ['id', 'status', 'confidence']
+    pre_df = pd.read_csv(ATTENDANCE_LOG_PATH, names=field_names)
+    df = pre_df.loc[pre_df.groupby('id')['confidence'].idxmax()]
+    merged_df = pd.merge(students_df, df, on='id', how='left')
+    merged_df['confidence'] = merged_df['confidence'].fillna(0)
+    merged_df['status'] = merged_df['status'].fillna('absent')
+    result = merged_df.to_dict(orient='records')
+    return result

@@ -4,15 +4,26 @@ from flask import (
     Flask,Blueprint, flash, g, redirect, render_template, request, session, url_for
 )
 
-app = Flask(__name__)
-bp = Blueprint('student', __name__, url_prefix='/student')
+
 from flaskr.db import get_db
 from flaskr.course import get_course_list
 from werkzeug.exceptions import abort
 import os
+import cv2
+import numpy as np
+import shutil
+import face_recognition
+import numpy as np
+import pandas as pd
+
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
-UPLOAD_PATH = PROJECT_ROOT+ '\\static\\img\\profile'
+
+UPLOAD_PATH = PROJECT_ROOT+ '\static\img\profile'
+
+app = Flask(__name__)
+bp = Blueprint('student', __name__, url_prefix='/student')
 app.config['UPLOAD_FOLDER'] = UPLOAD_PATH
+
 @bp.route('/list', methods=['GET'])
 def index():
     db = get_db()
@@ -43,8 +54,32 @@ def add():
         if 'txtFileUpload' in request.files:
             image = request.files['txtFileUpload']
             if image.filename != '':
-                image.save(os.path.join(app.config['UPLOAD_FOLDER'], image.filename))
-                image_path = '\static\img\profile\\'+image.filename
+                temp_image_path = app.config['UPLOAD_FOLDER'] + '\profiletemp\\'+image.filename
+                #print(temp_image_path,'UP:P ROOT PATH')
+                image.save(temp_image_path)
+                #print(temp_image_path,'temp image path')
+
+                # img = cv2.imread(temp_image_path)
+                # gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+                # # Load the pre-trained Haar cascade for face detection
+                # face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+
+                # # Detect faces in the image
+                # faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, minSize=(30, 30), flags=cv2.CASCADE_SCALE_IMAGE)
+
+                # # Count the number of faces detected
+                # num_faces = len(faces)
+                # print(num_faces ,'number of faces')
+                # if num_faces <= 0:
+                #     error = "No person face in image"
+                # elif num_faces > 1:
+                #     error = "More than one face is present."
+                # else:
+                #     image.save(os.path.join(app.config['UPLOAD_FOLDER'], 'hell.jpg'))
+                #     image_path = '\static\img\profile\\'+'hell.jpg'
+            else:
+                error = 'Image is required.'
 
         else:
             error = 'Image is required.'
@@ -65,11 +100,44 @@ def add():
             flash(error,"danger")
         else:
             db = get_db()
-            db.execute(
+            cursor = db.cursor()
+            cursor.execute(
                 'Insert into student(first_name,last_name,email,course_id,batch_id,image)'
                 ' VALUES (?, ?, ?, ?, ?, ?)',
-                (first_name, last_name, email, course_id, batch_id,image_path)
+                (first_name, last_name, email, course_id, batch_id,'')
             )
+            db.commit()
+            inserted_id = cursor.lastrowid
+#=============================================================================================
+            img_name = str(inserted_id)+'.jpg'
+            profile_img_path = app.config['UPLOAD_FOLDER'] + '\\'+img_name
+            shutil.copy(temp_image_path, profile_img_path)
+
+#=============================================================================================
+#=============================================================================================
+            print(profile_img_path)
+            img = cv2.imread(profile_img_path)
+            rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img_encoding = face_recognition.face_encodings(rgb_img)[0]
+            df = pd.read_csv(
+                    os.path.join(PROJECT_ROOT, 'ml\encoding\encodings.csv'))
+            en = df["Encodings"].tolist()
+            n = df["Persons"].tolist()
+            en.append(img_encoding)
+            n.append(inserted_id)
+            df = pd.DataFrame({"Persons": n, "Encodings": en})
+            df.to_csv(
+                    os.path.join(PROJECT_ROOT, 'ml\encoding\encodings.csv'), index=False)
+#=============================================================================================
+#=============================================================================================
+
+
+            cursor.execute(
+                'UPDATE student set image = ?'
+                ' WHERE id = ?',
+                ('/static/img/profile/'+str(inserted_id)+'.jpg',inserted_id)
+            )
+
             db.commit()
             flash("Successfully added new student","success")
             return redirect(url_for('student.index'))
