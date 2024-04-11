@@ -120,6 +120,7 @@ def index(bid,cid,sid):
     BATCH_ID = bid
     COURSE_ID = cid
     SUBJECT_ID = sid
+    delete_images()
     saved_df = pd.read_csv(
     os.path.join(PROJECT_ROOT, 'ml\encoding\encodings.csv'))
     en = saved_df["Encodings"]
