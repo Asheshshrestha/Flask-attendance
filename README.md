@@ -17,7 +17,7 @@ Welcome to the Attendance Tracker System with Face Detection! This system provid
 1. Clone the repository to your local machine:
 
     ```
-    git clone https://github.com/your_username/attendance-tracker.git
+    git clone https://github.com/Asheshshrestha/Flask-attendance.git
     ```
 
 2. Install dependencies:
@@ -29,16 +29,16 @@ Welcome to the Attendance Tracker System with Face Detection! This system provid
 3. Set up the database:
 
     ```
-    python manage.py migrate
+    flask --app flaskr init-db
     ```
 
 4. Run the development server:
 
     ```
-    python manage.py runserver
+    flask --app flaskr run --debug
     ```
 
-5. Access the system at `http://localhost:8000` in your web browser.
+5. Access the system at `http://127.0.0.1:5000/` in your web browser.
 
 ## Usage
 
@@ -47,14 +47,6 @@ Welcome to the Attendance Tracker System with Face Detection! This system provid
 3. **Attendance Tracking:** Users' attendance is automatically tracked when their faces are detected by the system.
 4. **Reporting:** Administrators can generate attendance reports and analyze attendance data.
 
-## Configuration
-
-- **Database:** Configure the database settings in `settings.py` to use your preferred database (e.g., SQLite, MySQL, PostgreSQL).
-- **Face Recognition Model:** Choose and configure the face recognition model used by the system (e.g., OpenCV, dlib, TensorFlow).
-
-## Contributing
-
-Contributions are welcome! Please follow the [contribution guidelines](CONTRIBUTING.md) before submitting pull requests.
 
 ## License
 
@@ -64,8 +56,7 @@ This project is licensed under the [MIT License](LICENSE).
 
 - [OpenCV](https://opencv.org/) - Open Source Computer Vision Library
 - [dlib](http://dlib.net/) - C++ Library for Machine Learning & Computer Vision
-- [TensorFlow](https://www.tensorflow.org/) - An Open Source Machine Learning Framework
 
 ## Contact
 
-For inquiries or support, please contact [your_email@example.com](mailto:your_email@example.com).
+For inquiries or support, please contact [contact.asheshstha@gmail.com](mailto:contact.asheshstha@gmail.com).
