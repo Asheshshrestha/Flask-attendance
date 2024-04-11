@@ -31,6 +31,9 @@ ATTENDANCE_SNAPSHOT = os.path.join(PROJECT_ROOT, 'ml\\snapshots\\')
 ATTENDANCE_LOG_PATH = ''
 FIELD_NAMES = ['id','status','confidence']
 #=====================================================================================
+if not os.path.exists(ATTENDANCE_SNAPSHOT):
+                os.makedirs(ATTENDANCE_SNAPSHOT)
+#=====================================================================================
 camera = None
 saved_df = pd.read_csv(
     os.path.join(PROJECT_ROOT, 'ml\encoding\encodings.csv'))
@@ -63,6 +66,8 @@ def detect_known_faces(img, image_encodings=e, persons=n):
             y1, x2, y2, x1 = [coord * 4 for coord in face_location]
             # Crop and save face image
             face_img = img[y1:y2, x1:x2]
+            if not os.path.exists(ATTENDANCE_SNAPSHOT):
+                os.makedirs(ATTENDANCE_SNAPSHOT)
             face_file_path = os.path.join(ATTENDANCE_SNAPSHOT, f'temp_{name}_{round(confidence, 2)}.jpg')
             print(face_file_path)
             cv2.imwrite(face_file_path, face_img)
@@ -81,6 +86,14 @@ def generate_frames():
     for i in en:
         e.append(np.fromstring(i[1:-1], dtype=float, sep=' '))
     camera = cv2.VideoCapture(0)  # Use 0 for webcam, or a video file path
+    if not camera.isOpened():
+        # If camera is not found, return a GIF or any other image
+        gif_path = os.path.join(PROJECT_ROOT, "static\img\\nosignal.gif")  # Specify the path to your GIF
+        with open(gif_path, 'rb') as f:
+            gif_bytes = f.read()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/gif\r\n\r\n' + gif_bytes + b'\r\n')
+        return
     while True:
         success, frame = camera.read()
         frame = cv2.flip(frame,1)
