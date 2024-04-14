@@ -1,2 +1,2 @@
-EMAIL = 'er.asheshshrestha@gmail.com'
-PASSWORD = 'wtcu yhvv fgkj mgqv'
+EMAIL = 'Your Email Here'
+PASSWORD = 'Your Password Here'
